@@ -1,0 +1,8 @@
+Summary:
+Create am application layer Load Balancer. A Load Balancer is a layer that sits in front of servers
+and takes requests from clients and distributes those requests among the server and handles any server
+failures and makes sure requests are properly handled.
+
+Lessons:
+1. A socket is an endpoint for communication between two devices on a network
+2. ExecutorService automatically provides a pool of threads and an API for assigning tasks to it
