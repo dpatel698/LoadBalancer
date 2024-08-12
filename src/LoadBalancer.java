@@ -6,19 +6,17 @@ import java.util.concurrent.*;
 public class LoadBalancer {
     private static final int LB_PORT = 80;
     private static final String BACKEND_HOST = "localhost";
-    private static final List<Integer> BACKEND_PORTS = Arrays.asList(8080, 8081);
+    private static final List<Integer> BACKEND_PORTS = Arrays.asList(8080, 8081, 8082);
+    private static final Set<Integer> OFFLINE_PORTS = new HashSet<>();
     private static int healthCheckDelay = 10;
     private static int rrIndex = 0;
 
     public static void main(String[] args) {
         healthCheckDelay = Integer.parseInt(args[0]);
-        // Schedule server health check
-        ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
-        service.scheduleAtFixedRate(command, 5, 5, TimeUnit.MINUTES);
+        serverHealthCheck();
         try (ServerSocket serverSocket = new ServerSocket(LB_PORT)) {
             System.out.println("Load balancer listening on port " + LB_PORT);
             ExecutorService executor = Executors.newFixedThreadPool(10);
-            executor.
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -84,7 +82,63 @@ public class LoadBalancer {
         if (rrIndex >= BACKEND_PORTS.size()) {
             rrIndex = 0;
         }
+        while(OFFLINE_PORTS.contains(BACKEND_PORTS.get(rrIndex))){
+            rrIndex++;
+            if (rrIndex >= BACKEND_PORTS.size()) {
+                rrIndex = 0;
+            }
+        }
+
         return port;
     }
+
+    private static void checkServers(){
+        for (Integer port : BACKEND_PORTS) {
+            String urlString = "http://localhost:" + port.toString();
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+
+                // Set the request method to GET
+                connection.setRequestMethod("GET");
+
+                // Get the response code
+                int responseCode = connection.getResponseCode();
+
+                // Check if the response code is 200 (HTTP OK)
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    OFFLINE_PORTS.remove(port);
+                } else {
+                    OFFLINE_PORTS.add(port);
+                }
+            } catch (Exception e) {
+                OFFLINE_PORTS.add(port);
+            }
+        }
+
+        // Make sure the round-robin index is at a healthy server
+        while(OFFLINE_PORTS.contains(BACKEND_PORTS.get(rrIndex))){
+            rrIndex++;
+            if (rrIndex >= BACKEND_PORTS.size()) {
+                rrIndex = 0;
+            }
+        }
+
+    }
+    private static void serverHealthCheck(){
+        try {
+            ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+            Runnable healthCheckCommand = new Runnable() {
+                public void run() {
+                    checkServers();
+                }
+            };
+            service.scheduleAtFixedRate(healthCheckCommand, 0, 10, TimeUnit.SECONDS);
+        }
+        catch(Exception e) {
+            e.printStackTrace();
+        }
+    }
+
 }
 
