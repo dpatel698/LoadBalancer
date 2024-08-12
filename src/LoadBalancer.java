@@ -1,16 +1,24 @@
 import java.io.*;
 import java.net.*;
+import java.util.*;
 import java.util.concurrent.*;
 
 public class LoadBalancer {
     private static final int LB_PORT = 80;
     private static final String BACKEND_HOST = "localhost";
-    private static final int BACKEND_PORT = 8080;
+    private static final List<Integer> BACKEND_PORTS = Arrays.asList(8080, 8081);
+    private static int healthCheckDelay = 10;
+    private static int rrIndex = 0;
 
     public static void main(String[] args) {
+        healthCheckDelay = Integer.parseInt(args[0]);
+        // Schedule server health check
+        ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
+        service.scheduleAtFixedRate(command, 5, 5, TimeUnit.MINUTES);
         try (ServerSocket serverSocket = new ServerSocket(LB_PORT)) {
             System.out.println("Load balancer listening on port " + LB_PORT);
             ExecutorService executor = Executors.newFixedThreadPool(10);
+            executor.
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
@@ -42,6 +50,8 @@ public class LoadBalancer {
             request = requestBuilder.toString();
 
             // Forward request to backend server
+            int BACKEND_PORT = getPortRoundRobin();
+
             try (Socket backendSocket = new Socket(BACKEND_HOST, BACKEND_PORT)) {
                 PrintWriter out = new PrintWriter(backendSocket.getOutputStream(), true);
                 out.print(request);
@@ -66,6 +76,15 @@ public class LoadBalancer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    private static int getPortRoundRobin() {
+        int port = BACKEND_PORTS.get(rrIndex);
+        rrIndex++;
+        if (rrIndex >= BACKEND_PORTS.size()) {
+            rrIndex = 0;
+        }
+        return port;
     }
 }
 

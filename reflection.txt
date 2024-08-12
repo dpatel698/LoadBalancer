@@ -6,3 +6,4 @@ failures and makes sure requests are properly handled.
 Lessons:
 1. A socket is an endpoint for communication between two devices on a network
 2. ExecutorService automatically provides a pool of threads and an API for assigning tasks to it
+3. When sending a request stream between sockets, you may need to specify when the receiver should stop listening for a request
