@@ -13,11 +13,11 @@ public class LoadBalancer {
 
     public static void main(String[] args) {
         healthCheckDelay = Integer.parseInt(args[0]);
-        serverHealthCheck();
+
+        initializeServerHealthCheck();
         try (ServerSocket serverSocket = new ServerSocket(LB_PORT)) {
             System.out.println("Load balancer listening on port " + LB_PORT);
             ExecutorService executor = Executors.newFixedThreadPool(10);
-
             while (true) {
                 Socket clientSocket = serverSocket.accept();
                 executor.submit(() -> handleClient(clientSocket));
@@ -125,7 +125,8 @@ public class LoadBalancer {
         }
 
     }
-    private static void serverHealthCheck(){
+
+    private static void initializeServerHealthCheck(){
         try {
             ScheduledExecutorService service = Executors.newScheduledThreadPool(1);
             Runnable healthCheckCommand = new Runnable() {
